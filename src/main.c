@@ -1,4 +1,9 @@
-/* main.c - Application main entry point */
+/**
+ * @file main.c
+ * @brief Application main entry point
+ *
+ * This file contains the main entry point for the application.
+ */
 
 /*
  * Copyright (c) 2016 Intel Corporation
@@ -6,49 +11,199 @@
  * SPDX-License-Identifier: Apache-2.0
  */
 
-#include <zephyr/types.h>
-#include <stddef.h>
-#include <string.h>
-#include <errno.h>
-#include <zephyr/sys/printk.h>
-#include <zephyr/sys/byteorder.h>
-#include <zephyr/kernel.h>
+#include <zephyr/types.h>		  /**< Include Zephyr types */
+#include <stddef.h>				  /**< Include standard definitions */
+#include <string.h>				  /**< Include string manipulation functions */
+#include <errno.h>				  /**< Include error handling */
+#include <zephyr/sys/printk.h>	  /**< Include printk for printing */
+#include <zephyr/sys/byteorder.h> /**< Include byte order conversion */
+#include <zephyr/kernel.h>		  /**< Include kernel related functionalities */
 
-#include <zephyr/settings/settings.h>
+#include <zephyr/settings/settings.h> /**< Include Zephyr settings */
 
-#include <zephyr/bluetooth/bluetooth.h>
-#include <zephyr/bluetooth/hci.h>
-#include <zephyr/bluetooth/conn.h>
-#include <zephyr/bluetooth/uuid.h>
-#include <zephyr/bluetooth/gatt.h>
+#include <zephyr/bluetooth/bluetooth.h> /**< Include Bluetooth stack */
+#include <zephyr/bluetooth/hci.h>		/**< Include Bluetooth HCI */
+#include <zephyr/bluetooth/conn.h>		/**< Include Bluetooth connection */
+#include <zephyr/bluetooth/uuid.h>		/**< Include Bluetooth UUID */
+#include <zephyr/bluetooth/gatt.h>		/**< Include Bluetooth GATT */
 
-#include "hog.h"
+#include "hog.h" /**< Include Human Interface Device (HID) over GATT */
+
+#include <zephyr/usb/usb_device.h> /**< Include USB device stack */
+#include <zephyr/usb/usbd.h>	   /**< Include USB device functions */
+#include <zephyr/drivers/uart.h>   /**< Include UART driver */
+#include <stdio.h>				   /**< Include standard I/O */
+#include <string.h>				   /**< Include string manipulation functions */
+#include <stdlib.h>				   /**< Include standard library */
+
+#define STACKSIZE 1024						 /**< Define stack size */
+K_THREAD_STACK_DEFINE(hog_stack, STACKSIZE); /**< Define stack for HID thread */
+
+K_THREAD_STACK_DEFINE(console_stack, STACKSIZE); /**< Define stack for console input thread */
+
+static struct k_thread hog_thread;	   /**< Declare HID thread */
+static struct k_thread console_thread; /**< Declare console input thread */
+
+#define MAX_DATA_LEN 50 /**< Define maximum data length */
+
+static char report[3][MAX_DATA_LEN]; /**< Define report data array */
+uint8_t global_report[3];			 /**< Define global report array */
+
+#if defined(CONFIG_USB_DEVICE_STACK_NEXT)
+USBD_CONFIGURATION_DEFINE(config_1,
+						  USB_SCD_SELF_POWERED,
+						  200);
+
+USBD_DESC_LANG_DEFINE(sample_lang);									 /**< Define USB language descriptor */
+USBD_DESC_MANUFACTURER_DEFINE(sample_mfr, "ZEPHYR");				 /**< Define USB manufacturer descriptor */
+USBD_DESC_PRODUCT_DEFINE(sample_product, "Zephyr USBD ACM console"); /**< Define USB product descriptor */
+USBD_DESC_SERIAL_NUMBER_DEFINE(sample_sn, "0123456789ABCDEF");		 /**< Define USB serial number descriptor */
+
+USBD_DEVICE_DEFINE(sample_usbd,
+				   DEVICE_DT_GET(DT_NODELABEL(zephyr_udc0)),
+				   0x2fe3, 0x0001); /**< Define USB device */
+
+static int enable_usb_device_next(void)
+{
+	int err;
+
+	err = usbd_add_descriptor(&sample_usbd, &sample_lang); /**< Add language descriptor */
+	if (err)
+	{
+		return err;
+	}
+
+	err = usbd_add_descriptor(&sample_usbd, &sample_mfr); /**< Add manufacturer descriptor */
+	if (err)
+	{
+		return err;
+	}
+
+	err = usbd_add_descriptor(&sample_usbd, &sample_product); /**< Add product descriptor */
+	if (err)
+	{
+		return err;
+	}
+
+	err = usbd_add_descriptor(&sample_usbd, &sample_sn); /**< Add serial number descriptor */
+	if (err)
+	{
+		return err;
+	}
+
+	err = usbd_add_configuration(&sample_usbd, &config_1); /**< Add USB configuration */
+	if (err)
+	{
+		return err;
+	}
+
+	err = usbd_register_class(&sample_usbd, "cdc_acm_0", 1); /**< Register USB class */
+	if (err)
+	{
+		return err;
+	}
+
+	err = usbd_init(&sample_usbd); /**< Initialize USB device */
+	if (err)
+	{
+		return err;
+	}
+
+	err = usbd_enable(&sample_usbd); /**< Enable USB device */
+	if (err)
+	{
+		return err;
+	}
+
+	return 0;
+}
+#endif /* IS_ENABLED(CONFIG_USB_DEVICE_STACK_NEXT) */
+
+/**
+ * @brief Process the received data
+ *
+ * This function processes the received data.
+ *
+ * @param[in] data Data to be processed
+ */
+static void process_data(const char *data)
+{
+	char *data_copy = strdup(data); /**< Create a copy to modify */
+	if (data_copy == NULL)
+	{
+		printk("Failed to allocate memory for data copy\n");
+		return;
+	}
+
+	char *token;
+	uint8_t *ptr = global_report;
+	int i = 0;
+
+	/* Split the data by space and store in global_report array */
+	token = strtok(data_copy, " ");
+	while (token != NULL && i < 3)
+	{
+		/* Convert token to uint8_t and store in global_report */
+		*ptr = (uint8_t)strtoul(token, NULL, 10);
+		ptr++;
+		token = strtok(NULL, " ");
+		strcpy(report[i], token);
+		report[i][0] = '\0';
+		i++;
+	}
+
+	while (i < 3)
+	{
+		report[i][0] = '\0';
+		i++;
+	}
+
+	free(data_copy); /**< Free the allocated memory */
+}
 
 static const struct bt_data ad[] = {
 	BT_DATA_BYTES(BT_DATA_FLAGS, (BT_LE_AD_GENERAL | BT_LE_AD_NO_BREDR)),
 	BT_DATA_BYTES(BT_DATA_UUID16_ALL,
-		      BT_UUID_16_ENCODE(BT_UUID_HIDS_VAL),
-		      BT_UUID_16_ENCODE(BT_UUID_BAS_VAL)),
+				  BT_UUID_16_ENCODE(BT_UUID_HIDS_VAL),
+				  BT_UUID_16_ENCODE(BT_UUID_BAS_VAL)),
 };
 
+/**
+ * @brief Callback for connection establishment
+ *
+ * This function is called when a connection is established.
+ *
+ * @param[in] conn Connection object
+ * @param[in] err Error code
+ */
 static void connected(struct bt_conn *conn, uint8_t err)
 {
 	char addr[BT_ADDR_LE_STR_LEN];
 
 	bt_addr_le_to_str(bt_conn_get_dst(conn), addr, sizeof(addr));
 
-	if (err) {
+	if (err)
+	{
 		printk("Failed to connect to %s (%u)\n", addr, err);
 		return;
 	}
 
 	printk("Connected %s\n", addr);
 
-	if (bt_conn_set_security(conn, BT_SECURITY_L2)) {
+	if (bt_conn_set_security(conn, BT_SECURITY_L2))
+	{
 		printk("Failed to set security\n");
 	}
 }
 
+/**
+ * @brief Callback for disconnection
+ *
+ * This function is called when a connection is disconnected.
+ *
+ * @param[in] conn Connection object
+ * @param[in] reason Disconnection reason code
+ */
 static void disconnected(struct bt_conn *conn, uint8_t reason)
 {
 	char addr[BT_ADDR_LE_STR_LEN];
@@ -58,30 +213,57 @@ static void disconnected(struct bt_conn *conn, uint8_t reason)
 	printk("Disconnected from %s (reason 0x%02x)\n", addr, reason);
 }
 
+/**
+ * @brief Callback for security change
+ *
+ * This function is called when security level changes.
+ *
+ * @param[in] conn Connection object
+ * @param[in] level Security level
+ * @param[in] err Error code
+ */
 static void security_changed(struct bt_conn *conn, bt_security_t level,
-			     enum bt_security_err err)
+							 enum bt_security_err err)
 {
 	char addr[BT_ADDR_LE_STR_LEN];
 
 	bt_addr_le_to_str(bt_conn_get_dst(conn), addr, sizeof(addr));
 
-	if (!err) {
+	if (!err)
+	{
 		printk("Security changed: %s level %u\n", addr, level);
-	} else {
+	}
+	else
+	{
 		printk("Security failed: %s level %u err %d\n", addr, level,
-		       err);
+			   err);
 	}
 }
 
+/**
+ * @brief Bluetooth initialization callback
+ *
+ * This function is called when Bluetooth initialization is completed.
+ *
+ * @param[in] err Error code
+ */
 BT_CONN_CB_DEFINE(conn_callbacks) = {
 	.connected = connected,
 	.disconnected = disconnected,
 	.security_changed = security_changed,
 };
 
+/**
+ * @brief Bluetooth ready callback
+ *
+ * This function is called when Bluetooth is ready.
+ *
+ * @param[in] err Error code
+ */
 static void bt_ready(int err)
 {
-	if (err) {
+	if (err)
+	{
 		printk("Bluetooth init failed (err %d)\n", err);
 		return;
 	}
@@ -90,12 +272,14 @@ static void bt_ready(int err)
 
 	hog_init();
 
-	if (IS_ENABLED(CONFIG_SETTINGS)) {
+	if (IS_ENABLED(CONFIG_SETTINGS))
+	{
 		settings_load();
 	}
 
 	err = bt_le_adv_start(BT_LE_ADV_CONN_NAME, ad, ARRAY_SIZE(ad), NULL, 0);
-	if (err) {
+	if (err)
+	{
 		printk("Advertising failed to start (err %d)\n", err);
 		return;
 	}
@@ -103,6 +287,14 @@ static void bt_ready(int err)
 	printk("Advertising successfully started\n");
 }
 
+/**
+ * @brief Display passkey callback
+ *
+ * This function is called to display passkey for pairing.
+ *
+ * @param[in] conn Connection object
+ * @param[in] passkey Passkey to be displayed
+ */
 static void auth_passkey_display(struct bt_conn *conn, unsigned int passkey)
 {
 	char addr[BT_ADDR_LE_STR_LEN];
@@ -112,6 +304,13 @@ static void auth_passkey_display(struct bt_conn *conn, unsigned int passkey)
 	printk("Passkey for %s: %06u\n", addr, passkey);
 }
 
+/**
+ * @brief Authentication cancel callback
+ *
+ * This function is called when pairing is cancelled.
+ *
+ * @param[in] conn Connection object
+ */
 static void auth_cancel(struct bt_conn *conn)
 {
 	char addr[BT_ADDR_LE_STR_LEN];
@@ -127,21 +326,127 @@ static struct bt_conn_auth_cb auth_cb_display = {
 	.cancel = auth_cancel,
 };
 
+/**
+ * @brief HID button thread
+ *
+ * This thread handles HID button events.
+ *
+ * @param[in] p1 Pointer argument 1
+ * @param[in] p2 Pointer argument 2
+ * @param[in] p3 Pointer argument 3
+ */
+void hog_button_thread(void *p1, void *p2, void *p3)
+{
+	ARG_UNUSED(p1);
+	ARG_UNUSED(p2);
+	ARG_UNUSED(p3);
+	while (1)
+	{
+		hog_button_loop(global_report);
+	}
+}
+
+/**
+ * @brief Console input thread
+ *
+ * This thread handles console input events.
+ *
+ * @param[in] p1 Pointer argument 1
+ * @param[in] p2 Pointer argument 2
+ * @param[in] p3 Pointer argument 3
+ */
+void console_input_thread(void *p1, void *p2, void *p3)
+{
+	const struct device *const dev = DEVICE_DT_GET(DT_CHOSEN(zephyr_console));
+	char data[MAX_DATA_LEN];
+
+	ARG_UNUSED(p1);
+	ARG_UNUSED(p2);
+	ARG_UNUSED(p3);
+	while (1)
+	{
+
+		/* Check if any data is available from USB */
+		ssize_t bytes_read = uart_fifo_read(dev, data, sizeof(data));
+		if (bytes_read > 0)
+		{
+			data[bytes_read] = '\0'; /**< Null-terminate the string */
+			process_data(data);		 /**< Process the received data */
+		}
+
+		/* Print the report array contents */
+		printk("Report: %d, %d, %d\n", global_report[0], global_report[1], global_report[2]);
+
+		k_sleep(K_SECONDS(1));
+	}
+}
+
+/**
+ * @brief Main function
+ *
+ * The main entry point of the application.
+ *
+ * @return Returns 0 on successful execution
+ */
 int main(void)
 {
+	const struct device *const dev = DEVICE_DT_GET(DT_CHOSEN(zephyr_console));
+	uint32_t dtr = 0;
+
+#if defined(CONFIG_USB_DEVICE_STACK_NEXT)
+	if (enable_usb_device_next())
+	{
+		return 0;
+	}
+#else
+	if (usb_enable(NULL))
+	{
+		return 0;
+	}
+#endif
+
+	/* Poll if the DTR flag was set */
+	while (!dtr)
+	{
+		uart_line_ctrl_get(dev, UART_LINE_CTRL_DTR, &dtr);
+		/* Give CPU resources to low priority threads. */
+		k_sleep(K_MSEC(100));
+	}
+
 	int err;
 
 	err = bt_enable(bt_ready);
-	if (err) {
+	if (err)
+	{
 		printk("Bluetooth init failed (err %d)\n", err);
 		return 0;
 	}
 
-	if (IS_ENABLED(CONFIG_SAMPLE_BT_USE_AUTHENTICATION)) {
+	if (IS_ENABLED(CONFIG_SAMPLE_BT_USE_AUTHENTICATION))
+	{
 		bt_conn_auth_cb_register(&auth_cb_display);
 		printk("Bluetooth authentication callbacks registered.\n");
 	}
 
-	hog_button_loop();
+	k_tid_t hog_tid = k_thread_create(&hog_thread, hog_stack, STACKSIZE,
+									  hog_button_thread, NULL, NULL, NULL,
+									  K_PRIO_COOP(8), 0, K_NO_WAIT);
+
+	if (hog_tid == NULL)
+	{
+		printk("Failed to create hog_thread\n");
+		return 0;
+	}
+
+	k_tid_t console_tid = k_thread_create(&console_thread, console_stack, STACKSIZE,
+										  console_input_thread, NULL, NULL, NULL,
+										  K_PRIO_COOP(7), 0, K_NO_WAIT);
+
+	if (console_tid == NULL)
+	{
+		printk("Failed to create console_input_thread\n");
+		return 0;
+	}
+
 	return 0;
 }

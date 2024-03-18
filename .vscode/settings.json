@@ -1,0 +1,11 @@
+{
+    "files.associations": {
+        "byteorder.h": "c",
+        "gatt.h": "c",
+        "uuid.h": "c",
+        "stddef.h": "c",
+        "gpio.h": "c",
+        "errno.h": "c",
+        "bluetooth.h": "c"
+    }
+}

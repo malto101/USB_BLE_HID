@@ -9,12 +9,13 @@
  */
 
 #ifdef __cplusplus
-extern "C" {
+extern "C"
+{
 #endif
 
-void hog_init(void);
+    void hog_init(void);
 
-void hog_button_loop(void);
+    void hog_button_loop(int8_t global_report[3]);
 
 #ifdef __cplusplus
 }
