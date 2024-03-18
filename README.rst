@@ -1,31 +1,37 @@
-.. _peripheral_hids:
+# Zephyr RTOS Mouse Control via HOG
 
-Bluetooth: Peripheral HIDs
-##########################
+## Overview
+This project utilizes Zephyr RTOS to create a system that controls the mouse of a host computer using the Human Interface Device (HID) Over GATT (HOG) protocol. When the device is plugged into the host computer, it reads data from the serial port and translates it into mouse movements.
 
-Overview
-********
+## Dependencies
+- Zephyr RTOS: The project relies on Zephyr RTOS to handle tasks, threads, and device interactions.
+- nrfutils
+- Device with USB and BLE support from Zephyr
 
-Similar to the :ref:`Peripheral <ble_peripheral>` sample, except that this
-application specifically exposes the HID GATT Service. The report map used is
-for a generic mouse.
+## Code Structure
+The codebase is organized into the following files and directories:
 
-In the default configuration the sample uses passkey authentication (displays a
-code on the peripheral and requires that to be entered on the host during
-pairing) and requires an authenticated link to access the GATT characteristics.
-To disable authentication and just use encrypted channels instead, build the
-sample with `CONFIG_SAMPLE_BT_USE_AUTHENTICATION=n`.
+1. `main.c`: Entry point of the application. Initializes peripherals and starts the main control loop.
+2. `hog.c`: Contains the initialization for BLE and translates it into mouse movements.
+3. `hog.h`: Header file declaring functions and structures used in `mouse_control.c`.
+4. `CMakeLists.txt`: CMake configuration file for building the project with Zephyr RTOS.
 
-Requirements
-************
+## Installation and Setup
+Note: For this setup, I have used the nRF52840 Dongle
+1. Clone the repository to your development environment.
+2. Navigate to the project directory.
+3. Build by `` west build --build-dir /build  --pristine --board nrf52840dongle_nrf52840 ``
+4. Zip the build by `` nrfutil pkg generate --hw-version 52 --sd-req=0x00         --application build/zephyr/zephyr.hex         --application-version 1 usb_hid.zip ``
+5. Flash the compiled binary to your device by `` nrfutil dfu usb-serial -pkg usb_hid.zip -p /dev/ttyACM0 ``
 
-* BlueZ running on the host, or
-* A board with BLE support
+## Usage
+1. Connect the device to the host computer via USB.
+2. Ensure that the host computer recognizes the device.
+3. Run the compiled binary on the device.
+4. The device will start reading data from the serial port and controlling the mouse accordingly.
 
-Building and Running
-********************
+## Contributions
+Contributions to this project are welcome! Feel free to submit bug reports, feature requests, or pull requests via GitHub.
 
-This sample can be found under :zephyr_file:`samples/bluetooth/peripheral_hids` in the
-Zephyr tree.
-
-See :ref:`bluetooth samples section <bluetooth-samples>` for details.
+## Acknowledgments
+Special thanks to the Zephyr RTOS community for their support and contributions.
