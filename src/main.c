@@ -36,6 +36,16 @@
 #include <string.h>				   /**< Include string manipulation functions */
 #include <stdlib.h>				   /**< Include standard library */
 
+#include <zephyr/drivers/gpio.h>
+
+#define LED1_NODE DT_ALIAS(led1)
+#define LED2_NODE DT_ALIAS(led2)
+#define LED3_NODE DT_ALIAS(led3)
+static const struct gpio_dt_spec led1 = GPIO_DT_SPEC_GET(LED1_NODE, gpios);
+static const struct gpio_dt_spec led2 = GPIO_DT_SPEC_GET(LED2_NODE, gpios);
+static const struct gpio_dt_spec led3 = GPIO_DT_SPEC_GET(LED3_NODE, gpios);
+int ret;
+
 #define STACKSIZE 1024						 /**< Define stack size */
 K_THREAD_STACK_DEFINE(hog_stack, STACKSIZE); /**< Define stack for HID thread */
 
@@ -168,6 +178,35 @@ static const struct bt_data ad[] = {
 				  BT_UUID_16_ENCODE(BT_UUID_BAS_VAL)),
 };
 
+// Function to control RGB LED
+void set_rgb_led_state(uint8_t r, uint8_t g, uint8_t b)
+{
+
+	if (ret < 0)
+	{
+		printk("Error: Failed to initialize LED GPIO port\n");
+		return;
+	}
+	if (r == 1)
+	{
+		ret = gpio_pin_configure_dt(&led1, GPIO_OUTPUT_ACTIVE);
+		ret = gpio_pin_configure_dt(&led2, GPIO_OUTPUT_INACTIVE);
+		ret = gpio_pin_configure_dt(&led3, GPIO_OUTPUT_INACTIVE);
+	}
+	if (g == 1)
+	{
+		ret = gpio_pin_configure_dt(&led1, GPIO_OUTPUT_INACTIVE);
+		ret = gpio_pin_configure_dt(&led2, GPIO_OUTPUT_ACTIVE);
+		ret = gpio_pin_configure_dt(&led3, GPIO_OUTPUT_INACTIVE);
+	}
+	if (b == 1)
+	{
+		ret = gpio_pin_configure_dt(&led1, GPIO_OUTPUT_INACTIVE);
+		ret = gpio_pin_configure_dt(&led2, GPIO_OUTPUT_INACTIVE);
+		ret = gpio_pin_configure_dt(&led3, GPIO_OUTPUT_ACTIVE);
+	}
+	// Set LED pins to desired state
+}
 /**
  * @brief Callback for connection establishment
  *
@@ -189,6 +228,7 @@ static void connected(struct bt_conn *conn, uint8_t err)
 	}
 
 	printk("Connected %s\n", addr);
+	set_rgb_led_state(0, 1, 0);
 
 	if (bt_conn_set_security(conn, BT_SECURITY_L2))
 	{
@@ -211,6 +251,7 @@ static void disconnected(struct bt_conn *conn, uint8_t reason)
 	bt_addr_le_to_str(bt_conn_get_dst(conn), addr, sizeof(addr));
 
 	printk("Disconnected from %s (reason 0x%02x)\n", addr, reason);
+	set_rgb_led_state(1, 0, 0);
 }
 
 /**
