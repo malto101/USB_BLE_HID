@@ -13,7 +13,7 @@ The codebase is organized into the following files and directories:
 
 1. `main.c`: Entry point of the application. Initializes peripherals and starts the main control loop.
 2. `hog.c`: Contains the initialization for BLE and translates it into mouse movements.
-3. `hog.h`: Header file declaring functions and structures used in `mouse_control.c`.
+3. `hog.h`: Header file declaring functions and structures used in `hog.c`.
 4. `CMakeLists.txt`: CMake configuration file for building the project with Zephyr RTOS.
 
 ## Installation and Setup
