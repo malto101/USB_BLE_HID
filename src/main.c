@@ -417,8 +417,10 @@ void console_input_thread(void *p1, void *p2, void *p3)
 
 		/* Print the report array contents */
 		printk("Report: %d, %d, %d\n", global_report[0], global_report[1], global_report[2]);
-
-		k_sleep(K_SECONDS(1));
+		k_sleep(K_MSEC(100));
+		// Reset global_report
+		global_report[1] = 0;
+		global_report[2] = 0;
 	}
 }
 
