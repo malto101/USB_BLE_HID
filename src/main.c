@@ -417,7 +417,7 @@ void console_input_thread(void *p1, void *p2, void *p3)
 
 		/* Print the report array contents */
 		printk("Report: %d, %d, %d\n", global_report[0], global_report[1], global_report[2]);
-		k_sleep(K_MSEC(100));
+		k_sleep(K_MSEC(30));
 		// Reset global_report
 		global_report[1] = 0;
 		global_report[2] = 0;
@@ -453,7 +453,7 @@ int main(void)
 	{
 		uart_line_ctrl_get(dev, UART_LINE_CTRL_DTR, &dtr);
 		/* Give CPU resources to low priority threads. */
-		k_sleep(K_MSEC(100));
+		k_sleep(K_MSEC(10));
 	}
 
 	int err;
