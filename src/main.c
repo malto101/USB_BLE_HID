@@ -4,7 +4,7 @@
  *
  * This file contains the main entry point for the application.
  */
-
+/**< Author: Dhruv Menon */
 /*
  * Copyright (c) 2016 Intel Corporation
  *
