@@ -58,6 +58,7 @@ static struct k_thread console_thread; /**< Declare console input thread */
 
 static char report[3][MAX_DATA_LEN]; /**< Define report data array */
 uint8_t global_report[3];			 /**< Define global report array */
+char global_addr[BT_ADDR_LE_STR_LEN];
 
 #if defined(CONFIG_USB_DEVICE_STACK_NEXT)
 USBD_CONFIGURATION_DEFINE(config_1,
@@ -65,9 +66,9 @@ USBD_CONFIGURATION_DEFINE(config_1,
 						  200);
 
 USBD_DESC_LANG_DEFINE(sample_lang);									 /**< Define USB language descriptor */
-USBD_DESC_MANUFACTURER_DEFINE(sample_mfr, "ZEPHYR");				 /**< Define USB manufacturer descriptor */
-USBD_DESC_PRODUCT_DEFINE(sample_product, "Zephyr USBD ACM console"); /**< Define USB product descriptor */
-USBD_DESC_SERIAL_NUMBER_DEFINE(sample_sn, "0123456789ABCDEF");		 /**< Define USB serial number descriptor */
+USBD_DESC_MANUFACTURER_DEFINE(sample_mfr, "MOZARK");				 /**< Define USB manufacturer descriptor */
+USBD_DESC_PRODUCT_DEFINE(sample_product, "MOZARK USBD ACM console"); /**< Define USB product descriptor */
+USBD_DESC_SERIAL_NUMBER_DEFINE(sample_sn, "001");					 /**< Define USB serial number descriptor */
 
 USBD_DEVICE_DEFINE(sample_usbd,
 				   DEVICE_DT_GET(DT_NODELABEL(zephyr_udc0)),
@@ -174,8 +175,8 @@ static void process_data(const char *data)
 static const struct bt_data ad[] = {
 	BT_DATA_BYTES(BT_DATA_FLAGS, (BT_LE_AD_GENERAL | BT_LE_AD_NO_BREDR)),
 	BT_DATA_BYTES(BT_DATA_UUID16_ALL,
-				  BT_UUID_16_ENCODE(BT_UUID_HIDS_VAL),
-				  BT_UUID_16_ENCODE(BT_UUID_BAS_VAL)),
+				  BT_UUID_16_ENCODE(BT_UUID_HIDS_VAL)),
+
 };
 
 // Function to control RGB LED
@@ -228,6 +229,7 @@ static void connected(struct bt_conn *conn, uint8_t err)
 	}
 
 	printk("Connected %s\n", addr);
+	strcpy(global_addr, addr);
 	set_rgb_led_state(0, 1, 0);
 
 	if (bt_conn_set_security(conn, BT_SECURITY_L2))
@@ -251,6 +253,7 @@ static void disconnected(struct bt_conn *conn, uint8_t reason)
 	bt_addr_le_to_str(bt_conn_get_dst(conn), addr, sizeof(addr));
 
 	printk("Disconnected from %s (reason 0x%02x)\n", addr, reason);
+	strcpy(global_addr, NULL);
 	set_rgb_led_state(1, 0, 0);
 }
 
@@ -416,7 +419,8 @@ void console_input_thread(void *p1, void *p2, void *p3)
 		}
 
 		/* Print the report array contents */
-		printk("Report: %d, %d, %d\n", global_report[0], global_report[1], global_report[2]);
+		// printk("Report: %d, %d, %d\n", global_report[0], global_report[1], global_report[2]);
+		printk("Address: %s", global_addr);
 		k_sleep(K_MSEC(30));
 		// Reset global_report
 		global_report[1] = 0;
