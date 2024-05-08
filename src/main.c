@@ -190,20 +190,26 @@ void set_rgb_led_state(uint8_t r, uint8_t g, uint8_t b)
 	if (r == 1)
 	{
 		ret = gpio_pin_configure_dt(&led1, GPIO_OUTPUT_ACTIVE);
-		ret = gpio_pin_configure_dt(&led2, GPIO_OUTPUT_INACTIVE);
-		ret = gpio_pin_configure_dt(&led3, GPIO_OUTPUT_INACTIVE);
+	}
+	else
+	{
+		ret = gpio_pin_configure_dt(&led1, GPIO_OUTPUT_INACTIVE);
 	}
 	if (g == 1)
 	{
-		ret = gpio_pin_configure_dt(&led1, GPIO_OUTPUT_INACTIVE);
 		ret = gpio_pin_configure_dt(&led2, GPIO_OUTPUT_ACTIVE);
-		ret = gpio_pin_configure_dt(&led3, GPIO_OUTPUT_INACTIVE);
+	}
+	else
+	{
+		ret = gpio_pin_configure_dt(&led2, GPIO_OUTPUT_INACTIVE);
 	}
 	if (b == 1)
 	{
-		ret = gpio_pin_configure_dt(&led1, GPIO_OUTPUT_INACTIVE);
-		ret = gpio_pin_configure_dt(&led2, GPIO_OUTPUT_INACTIVE);
 		ret = gpio_pin_configure_dt(&led3, GPIO_OUTPUT_ACTIVE);
+	}
+	else
+	{
+		ret = gpio_pin_configure_dt(&led3, GPIO_OUTPUT_INACTIVE);
 	}
 	// Set LED pins to desired state
 }
