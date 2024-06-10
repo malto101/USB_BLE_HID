@@ -35,7 +35,7 @@
 #include <stdio.h>				   /**< Include standard I/O */
 #include <string.h>				   /**< Include string manipulation functions */
 #include <stdlib.h>				   /**< Include standard library */
-
+#include <ctype.h>
 #include <zephyr/drivers/gpio.h>
 
 #define LED1_NODE DT_ALIAS(led1)
@@ -46,19 +46,13 @@ static const struct gpio_dt_spec led2 = GPIO_DT_SPEC_GET(LED2_NODE, gpios);
 static const struct gpio_dt_spec led3 = GPIO_DT_SPEC_GET(LED3_NODE, gpios);
 int ret;
 
-#define STACKSIZE 1024						 /**< Define stack size */
-K_THREAD_STACK_DEFINE(hog_stack, STACKSIZE); /**< Define stack for HID thread */
-
-K_THREAD_STACK_DEFINE(console_stack, STACKSIZE); /**< Define stack for console input thread */
-
-static struct k_thread hog_thread;	   /**< Declare HID thread */
-static struct k_thread console_thread; /**< Declare console input thread */
+#define STACKSIZE 1024 /**< Define stack size */
 
 #define MAX_DATA_LEN 50 /**< Define maximum data length */
 
 static char report[3][MAX_DATA_LEN]; /**< Define report data array */
 uint8_t global_report[3];			 /**< Define global report array */
-
+struct bt_conn *default_conn = NULL;
 #if defined(CONFIG_USB_DEVICE_STACK_NEXT)
 USBD_CONFIGURATION_DEFINE(config_1,
 						  USB_SCD_SELF_POWERED,
@@ -139,6 +133,37 @@ static int enable_usb_device_next(void)
 static void process_data(const char *data)
 {
 	char *data_copy = strdup(data); /**< Create a copy to modify */
+	size_t len = strlen(data);
+	while (len > 0 && isspace((unsigned char)data[len - 1]))
+	{
+		len--;
+	}
+	data_copy[len] = '\0'; // Trimmed string
+
+	printk("Received data: %s\n", data);
+
+	if (strcmp(data_copy, "getDeviceId") == 0)
+	{
+		// Print the Bluetooth device name
+		printk("Bluetooth Device Name: %s\n", CONFIG_BT_DEVICE_NAME);
+		return;
+	}
+	else if (strcmp(data_copy, "getConnectedAddress") == 0)
+	{
+		// Print the connected device address if a connection exists
+		if (default_conn)
+		{
+			char addr[BT_ADDR_LE_STR_LEN];
+			bt_addr_le_to_str(bt_conn_get_dst(default_conn), addr, sizeof(addr));
+			printk("Connected Device Address: %s\n", addr);
+		}
+		else
+		{
+			printk("No device connected\n");
+		}
+		return;
+	}
+
 	if (data_copy == NULL)
 	{
 		printk("Failed to allocate memory for data copy\n");
@@ -167,7 +192,6 @@ static void process_data(const char *data)
 		report[i][0] = '\0';
 		i++;
 	}
-
 	free(data_copy); /**< Free the allocated memory */
 }
 
@@ -232,6 +256,7 @@ static void connected(struct bt_conn *conn, uint8_t err)
 		printk("Failed to connect to %s (%u)\n", addr, err);
 		return;
 	}
+	default_conn = conn;
 
 	printk("Connected %s\n", addr);
 	set_rgb_led_state(0, 1, 0);
@@ -258,6 +283,10 @@ static void disconnected(struct bt_conn *conn, uint8_t reason)
 
 	printk("Disconnected from %s (reason 0x%02x)\n", addr, reason);
 	set_rgb_led_state(1, 0, 0);
+	if (conn == default_conn) // Clear the stored connection object if it matches the disconnected one
+	{
+		default_conn = NULL;
+	}
 }
 
 /**
@@ -427,6 +456,7 @@ int main(void)
 		ssize_t bytes_read = uart_fifo_read(dev, data, sizeof(data));
 		if (bytes_read > 0)
 		{
+			printk("%d\n", bytes_read);
 			data[bytes_read] = '\0'; /**< Null-terminate the string */
 			process_data(data);		 /**< Process the received data */
 		}
