@@ -215,5 +215,4 @@ void hog_button_loop(int8_t global_report[3])
 	bt_gatt_notify(NULL, &hog_svc.attrs[5],
 				   report, sizeof(report));
 	printk("advertised: %d %d %d \n", report[0], report[1], report[2]);
-	k_sleep(K_MSEC(10));
 }

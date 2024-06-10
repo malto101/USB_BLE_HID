@@ -374,63 +374,6 @@ static struct bt_conn_auth_cb auth_cb_display = {
 };
 
 /**
- * @brief HID button thread
- *
- * This thread handles HID button events.
- *
- * @param[in] p1 Pointer argument 1
- * @param[in] p2 Pointer argument 2
- * @param[in] p3 Pointer argument 3
- */
-void hog_button_thread(void *p1, void *p2, void *p3)
-{
-	ARG_UNUSED(p1);
-	ARG_UNUSED(p2);
-	ARG_UNUSED(p3);
-	while (1)
-	{
-		hog_button_loop(global_report);
-	}
-}
-
-/**
- * @brief Console input thread
- *
- * This thread handles console input events.
- *
- * @param[in] p1 Pointer argument 1
- * @param[in] p2 Pointer argument 2
- * @param[in] p3 Pointer argument 3
- */
-void console_input_thread(void *p1, void *p2, void *p3)
-{
-	const struct device *const dev = DEVICE_DT_GET(DT_CHOSEN(zephyr_console));
-	char data[MAX_DATA_LEN];
-
-	ARG_UNUSED(p1);
-	ARG_UNUSED(p2);
-	ARG_UNUSED(p3);
-	while (1)
-	{
-
-		/* Check if any data is available from USB */
-		ssize_t bytes_read = uart_fifo_read(dev, data, sizeof(data));
-		if (bytes_read > 0)
-		{
-			data[bytes_read] = '\0'; /**< Null-terminate the string */
-			process_data(data);		 /**< Process the received data */
-		}
-
-		/* Print the report array contents */
-		printk("Report: %d, %d, %d\n", global_report[0], global_report[1], global_report[2]);
-		k_sleep(K_MSEC(10));
-		// Reset global_report
-		global_report[1] = 0;
-		global_report[2] = 0;
-	}
-}
-
-/**
  * @brief Main function
  *
  * The main entry point of the application.
@@ -477,24 +420,26 @@ int main(void)
 		printk("Bluetooth authentication callbacks registered.\n");
 	}
 
-	k_tid_t hog_tid = k_thread_create(&hog_thread, hog_stack, STACKSIZE,
-									  hog_button_thread, NULL, NULL, NULL,
-									  K_PRIO_COOP(8), 0, K_NO_WAIT);
-
-	if (hog_tid == NULL)
+	char data[MAX_DATA_LEN];
+	while (1)
 	{
-		printk("Failed to create hog_thread\n");
-		return 0;
-	}
+		/* Check if any data is available from USB */
+		ssize_t bytes_read = uart_fifo_read(dev, data, sizeof(data));
+		if (bytes_read > 0)
+		{
+			data[bytes_read] = '\0'; /**< Null-terminate the string */
+			process_data(data);		 /**< Process the received data */
+		}
 
-	k_tid_t console_tid = k_thread_create(&console_thread, console_stack, STACKSIZE,
-										  console_input_thread, NULL, NULL, NULL,
-										  K_PRIO_COOP(7), 0, K_NO_WAIT);
+		/* Print the report array contents */
+		printk("Report: %d, %d, %d\n", global_report[0], global_report[1], global_report[2]);
 
-	if (console_tid == NULL)
-	{
-		printk("Failed to create console_input_thread\n");
-		return 0;
+		// Reset global_report
+
+		hog_button_loop(global_report);
+		global_report[1] = 0;
+		global_report[2] = 0;
+		k_sleep(K_MSEC(1));
 	}
 
 	return 0;
