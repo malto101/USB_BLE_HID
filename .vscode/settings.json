@@ -8,5 +8,4 @@
         "errno.h": "c",
         "bluetooth.h": "c"
     },
-    "nrf-connect.topdir": "/home/melta101/zephyrproject"
 }
