@@ -1,34 +1,35 @@
-name: Build
+name: Zephyr Build
 
-on:
-  push:
-  pull_request:
+on: [push, pull_request]
 
 jobs:
   build:
     runs-on: ubuntu-latest
-    container: zephyrprojectrtos/zephyr-build:latest
-    env:
-      CMAKE_PREFIX_PATH: /opt/toolchains
+    container:
+      image: zephyrprojectrtos/ci:v0.26.4
+
     steps:
-    
-      - name: Checkout
-        uses: actions/checkout@v3
-        
-      - name: Zephyr Setup
-        run: |
-          pip3 install -U west
-          west init -l .
-          cd zephyrproject
-          west update
-          pip3 install -r /zephyr/scripts/requirements-base.txt
-      
-      - name: Build NRF project
-        run: |
-          west build --build-dir build --pristine --board nrf52840dongle_nrf52840 --no-sysbuild -- -DNCS_TOOLCHAIN_VERSION=NONE -DBOARD_ROOT= -DCACHED_CONF_FILE=prj.conf
-    
-      - name: Upload build artifacts
-        uses: actions/upload-artifact@v3
-        with:
-          name: build-artifacts
-          path: build/
+    - name: Checkout repository
+      uses: actions/checkout@v2
+
+    - name: Set up Zephyr environment
+      run: |
+        export ZEPHYR_BASE=/workdir/zephyrproject/zephyr
+        export ZEPHYR_SDK_INSTALL_DIR=/opt/toolchains/zephyr-sdk
+        source $ZEPHYR_BASE/zephyr-env.sh
+
+    - name: Install West
+      run: pip3 install west
+
+    - name: Update Zephyr dependencies
+      run: west update
+
+    - name: Build the project
+      run: |
+        west build --build-dir build --pristine --board nrf52840dongle_nrf52840 --no-sysbuild -- -DNCS_TOOLCHAIN_VERSION=NONE -DBOARD_ROOT= -DCACHED_CONF_FILE=prj.conf
+
+    - name: Upload artifact
+      uses: actions/upload-artifact@v2
+      with:
+        name: build-hex
+        path: build/zephyr/zephyr.hex
