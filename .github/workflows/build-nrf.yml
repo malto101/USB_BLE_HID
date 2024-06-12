@@ -29,8 +29,8 @@ jobs:
           cd ..
           ls -la
           echo "Listing files in USB_BLE_HID/zephyr/scripts directory:"
-          ls -la zephyr/scripts
-          pip3 install -r ../zephyr/scripts/requirements-base.txt
+          ls -la nrf/zephyr/scripts
+          pip3 install -r nrf/zephyr/scripts/requirements-base.txt
 
       - name: Build NRF project
         run: |
