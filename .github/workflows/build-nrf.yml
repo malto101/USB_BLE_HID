@@ -7,28 +7,22 @@ on:
 jobs:
   build:
     runs-on: ubuntu-latest
-    container: zephyrprojectrtos/ci:v0.26.4
+    container: zephyrprojectrtos/zephyr-build:latest
     env:
       CMAKE_PREFIX_PATH: /opt/toolchains
     steps:
-      - name: Initialize
+      - name: Zephyr Setup
         run: |
-          pip3 install --no-cache-dir -U west
+          pip3 install -U west
           west init -l .
+          cd zephyrproject
           west update
-          echo "Listing files in USB_BLE_HID directory:"
-          ls -la
-          echo "Listing below folders:"
-          cd ..
-          ls -la
-          echo "Listing files in USB_BLE_HID/zephyr/scripts directory:"
-          cd USB_BLE_HID
-          ls -la nrf/
-          pip3 install -r nrf/zephyr/scripts/requirements-base.txt
+          pip3 install -r /zephyr/scripts/requirements-base.txt
 
       - name: Checkout
         uses: actions/checkout@v3
 
+      
       - name: Build NRF project
         run: |
           west build --build-dir build --pristine --board nrf52840dongle_nrf52840 --no-sysbuild -- -DNCS_TOOLCHAIN_VERSION=NONE -DBOARD_ROOT= -DCACHED_CONF_FILE=prj.conf
