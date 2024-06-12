@@ -12,7 +12,6 @@ jobs:
       CMAKE_PREFIX_PATH: /opt/toolchains
     steps:
       - name: Initialize
-        working-directory: USB_BLE_HID
         run: |
           pip3 install --no-cache-dir -U west
           west init -l .
