@@ -1,0 +1,62 @@
+name: Build NRF NCS Project
+
+on:
+  push:
+    branches:
+      - main
+  pull_request:
+    branches:
+      - main
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+
+    steps:
+    - name: Checkout repository
+      uses: actions/checkout@v3
+
+    - name: Set up Python
+      uses: actions/setup-python@v4
+      with:
+        python-version: '3.8'
+
+    - name: Set up CMake
+      uses: jwlawson/actions-setup-cmake@v1
+
+    - name: Set up Zephyr environment
+      run: |
+        sudo apt-get update
+        sudo apt-get install -y --no-install-recommends \
+          git \
+          cmake \
+          ninja-build \
+          gperf \
+          ccache \
+          dfu-util \
+          device-tree-compiler \
+          wget \
+          python3-pip \
+          python3-setuptools \
+          python3-wheel \
+          xz-utils \
+          file \
+          make \
+          gcc \
+          gcc-multilib \
+          libsdl2-dev
+        pip3 install west
+        west init -l .
+        west update
+        west zephyr-export
+        pip3 install -r zephyr/scripts/requirements.txt
+
+    - name: Build NRF project
+      run: |
+        west build --build-dir build --pristine --board nrf52840dongle_nrf52840 --no-sysbuild -- -DNCS_TOOLCHAIN_VERSION=NONE -DBOARD_ROOT= -DCACHED_CONF_FILE=prj.conf
+    
+    - name: Upload build artifacts
+      uses: actions/upload-artifact@v3
+      with:
+        name: build-artifacts
+        path: build/
