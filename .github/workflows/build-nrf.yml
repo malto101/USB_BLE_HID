@@ -11,14 +11,8 @@ jobs:
     env:
       CMAKE_PREFIX_PATH: /opt/toolchains
     steps:
-      - name: Checkout
-        uses: actions/checkout@v3
-        with:
-          fetch-depth: 0
-          path: USB_BLE_HID
-
       - name: Initialize
-        working-directory: USB_BLE_HID
+        working-directory: home
         run: |
           pip3 install --no-cache-dir -U west
           west init -l .
@@ -29,11 +23,18 @@ jobs:
           cd ..
           ls -la
           echo "Listing files in USB_BLE_HID/zephyr/scripts directory:"
-          ls -la nrf/zephyr/scripts
+          ls -la nrf/
           pip3 install -r nrf/zephyr/scripts/requirements-base.txt
+
+      - name: Checkout
+        uses: actions/checkout@v3
+        with:
+          fetch-depth: 0
+          path: home/nrf
 
       - name: Build NRF project
         run: |
+        
           west build --build-dir build --pristine --board nrf52840dongle_nrf52840 --no-sysbuild -- -DNCS_TOOLCHAIN_VERSION=NONE -DBOARD_ROOT= -DCACHED_CONF_FILE=prj.conf
     
       - name: Upload build artifacts
