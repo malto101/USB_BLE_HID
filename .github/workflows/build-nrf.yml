@@ -1,4 +1,4 @@
-name: Build NRF NCS Project
+name: Build
 
 on:
   push:
@@ -7,52 +7,37 @@ on:
 jobs:
   build:
     runs-on: ubuntu-latest
-
+    container: zephyrprojectrtos/ci:v0.26.4
+    env:
+      CMAKE_PREFIX_PATH: /opt/toolchains
     steps:
-    - name: Checkout repository
-      uses: actions/checkout@v3
+      - name: Checkout
+        uses: actions/checkout@v3
+        with:
+          fetch-depth: 0
+          path: USB_BLE_HID
+          
+      - name: Set variables
+        working-directory: USB_BLE_HID
+        id: vars
+        run: |
+             echo "branch=${GITHUB_REF#refs/*/}" >> $GITHUB_OUTPUT
+             echo "sha_short=$(git rev-parse --short HEAD)" >> $GITHUB_OUTPUT
 
-    - name: Set up Python
-      uses: actions/setup-python@v4
-      with:
-        python-version: '3.8'
+      - name: Initialize
+        working-directory: USB_BLE_HID
+        run: |
+          pip3 install -U west
+          west init -l .
+          west update
+          pip3 install -r ../zephyr/scripts/requirements-base.txt
 
-    - name: Set up CMake
-      uses: jwlawson/actions-setup-cmake@v1
-
-    - name: Set up Zephyr environment
-      run: |
-        sudo apt-get update
-        sudo apt-get install -y --no-install-recommends \
-          git \
-          cmake \
-          ninja-build \
-          gperf \
-          ccache \
-          dfu-util \
-          device-tree-compiler \
-          wget \
-          python3-pip \
-          python3-setuptools \
-          python3-wheel \
-          xz-utils \
-          file \
-          make \
-          gcc \
-          gcc-multilib \
-          libsdl2-dev
-        pip3 install west
-        west init -l .
-        west update
-        west zephyr-export
-        pip3 install -r zephyr/scripts/requirements.txt
-
-    - name: Build NRF project
-      run: |
-        west build --build-dir build --pristine --board nrf52840dongle_nrf52840 --no-sysbuild -- -DNCS_TOOLCHAIN_VERSION=NONE -DBOARD_ROOT= -DCACHED_CONF_FILE=prj.conf
+      - name: Build NRF project
+        run: |
+          west build --build-dir build --pristine --board nrf52840dongle_nrf52840 --no-sysbuild -- -DNCS_TOOLCHAIN_VERSION=NONE -DBOARD_ROOT= -DCACHED_CONF_FILE=prj.conf
     
-    - name: Upload build artifacts
-      uses: actions/upload-artifact@v3
-      with:
-        name: build-artifacts
-        path: build/
+      - name: Upload build artifacts
+        uses: actions/upload-artifact@v3
+        with:
+          name: build-artifacts
+          path: build/
