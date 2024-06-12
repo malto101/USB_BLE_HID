@@ -11,6 +11,11 @@ jobs:
     env:
       CMAKE_PREFIX_PATH: /opt/toolchains
     steps:
+      - name: explore
+        run: |
+          ls 
+          ls ../
+          ls ../../
       - name: Initialize
         run: |
           pip3 install --no-cache-dir -U west
