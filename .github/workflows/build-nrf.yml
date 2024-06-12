@@ -12,7 +12,6 @@ jobs:
       CMAKE_PREFIX_PATH: /opt/toolchains
     steps:
       - name: Initialize
-        working-directory: home
         run: |
           pip3 install --no-cache-dir -U west
           west init -l .
@@ -28,13 +27,9 @@ jobs:
 
       - name: Checkout
         uses: actions/checkout@v3
-        with:
-          fetch-depth: 0
-          path: home/nrf
 
       - name: Build NRF project
         run: |
-        
           west build --build-dir build --pristine --board nrf52840dongle_nrf52840 --no-sysbuild -- -DNCS_TOOLCHAIN_VERSION=NONE -DBOARD_ROOT= -DCACHED_CONF_FILE=prj.conf
     
       - name: Upload build artifacts
