@@ -16,20 +16,20 @@ jobs:
         with:
           fetch-depth: 0
           path: USB_BLE_HID
-          
-      - name: Set variables
-        working-directory: USB_BLE_HID
-        id: vars
-        run: |
-             echo "branch=${GITHUB_REF#refs/*/}" >> $GITHUB_OUTPUT
-             echo "sha_short=$(git rev-parse --short HEAD)" >> $GITHUB_OUTPUT
 
       - name: Initialize
         working-directory: USB_BLE_HID
         run: |
-          pip3 install -U west
+          pip3 install --no-cache-dir -U west
           west init -l .
           west update
+          echo "Listing files in USB_BLE_HID directory:"
+          ls -la
+          echo "Listing below folders:"
+          cd ..
+          ls -la
+          echo "Listing files in USB_BLE_HID/zephyr/scripts directory:"
+          ls -la zephyr/scripts
           pip3 install -r ../zephyr/scripts/requirements-base.txt
 
       - name: Build NRF project
