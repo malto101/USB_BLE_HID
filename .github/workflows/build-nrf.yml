@@ -11,12 +11,8 @@ jobs:
     env:
       CMAKE_PREFIX_PATH: /opt/toolchains
     steps:
-      - name: explore
-        run: |
-          ls 
-          ls ../
-          ls ../../
       - name: Initialize
+        working-directory: USB_BLE_HID
         run: |
           pip3 install --no-cache-dir -U west
           west init -l .
@@ -27,6 +23,7 @@ jobs:
           cd ..
           ls -la
           echo "Listing files in USB_BLE_HID/zephyr/scripts directory:"
+          cd USB_BLE_HID
           ls -la nrf/
           pip3 install -r nrf/zephyr/scripts/requirements-base.txt
 
