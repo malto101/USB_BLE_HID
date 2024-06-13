@@ -12,7 +12,8 @@ jobs:
 
     - name: Set up Zephyr environment
       run: |
-        west init -l
+        mkdir ~/zephyrproject
+        west init ~/zephyrproject
         cd ~/zephyrproject
         west update
         west zephyr-export
