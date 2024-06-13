@@ -22,13 +22,16 @@ jobs:
         
     - name: Checkout repository
       run: |
+        ls
         git -C ~/zephyrproject clone https://github.com/malto101/USB_BLE_HID.git
+        ls ~/zephyrproject
       
     - name: Build the project
       run: |
         echo "list"
         ls
-        west build --pristine --board nrf52840dongle_nrf52840 ~/zephyrproject/USB_BLE_HID -DBOARD_ROOT= -DCACHED_CONF_FILE=prj.conf
+        cd ~/zephyrproject/ 
+        west build --pristine --board nrf52840dongle_nrf52840 USB_BLE_HID -DBOARD_ROOT= -DCACHED_CONF_FILE=prj.conf
 
     - name: Upload artifact
       uses: actions/upload-artifact@v2
