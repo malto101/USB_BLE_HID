@@ -17,12 +17,16 @@ jobs:
         cd ~/zephyrproject
         west zephyr-export
         pip install -r ~/zephyrproject/zephyr/scripts/requirements.txt
+        echo "List"
+        ls
         
     - name: Checkout repository
       uses: actions/checkout@v2
       
     - name: Build the project
       run: |
+        echo "list"
+        ls
         west build --pristine --board nrf52840dongle_nrf52840 --no-sysbuild -- -DNCS_TOOLCHAIN_VERSION=NONE -DBOARD_ROOT= -DCACHED_CONF_FILE=prj.conf
 
     - name: Upload artifact
