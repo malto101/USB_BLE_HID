@@ -10,7 +10,6 @@ jobs:
 
     steps:
 
-
     - name: Set up Zephyr environment
       run: |
         west init ~/zephyrproject
@@ -20,6 +19,14 @@ jobs:
         pip install -r ~/zephyrproject/zephyr/scripts/requirements.txt
         echo "List"
         ls
+
+    - name: Setup Zephyr-SDK
+      run: |
+        cd ~
+        wget https://github.com/zephyrproject-rtos/sdk-ng/releases/download/v0.16.0/zephyr-sdk-0.16.0-setup.run
+        chmod +x zephyr-sdk-0.16.0-setup.run
+        ./zephyr-sdk-0.16.0-setup.run -- -d ~/zephyr-sdk
+        export ZEPHYR_SDK_INSTALL_DIR=~/zephyr-sdk
         
     - name: Checkout repository
       run: |
