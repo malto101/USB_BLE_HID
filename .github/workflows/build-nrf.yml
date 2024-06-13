@@ -15,6 +15,7 @@ jobs:
       run: |
         west init ~/zephyrproject
         cd ~/zephyrproject
+        west update
         west zephyr-export
         pip install -r ~/zephyrproject/zephyr/scripts/requirements.txt
         echo "List"
@@ -31,7 +32,7 @@ jobs:
         echo "list"
         ls
         cd ~/zephyrproject/ 
-        west build --pristine --board nrf52840dongle_nrf52840 USB_BLE_HID -DBOARD_ROOT= -DCACHED_CONF_FILE=prj.conf
+        west build -p always -b nrf52840dongle USB_BLE_HID 
 
     - name: Upload artifact
       uses: actions/upload-artifact@v2
