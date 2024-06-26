@@ -51,7 +51,7 @@ int ret;
 #define MAX_DATA_LEN 50 /**< Define maximum data length */
 
 static char report[3][MAX_DATA_LEN]; /**< Define report data array */
-uint8_t global_report[3];			 /**< Define global report array */
+uint8_t global_report[8];			 /**< Define global report array for keyboard */
 struct bt_conn *default_conn = NULL;
 #if defined(CONFIG_USB_DEVICE_STACK_NEXT)
 USBD_CONFIGURATION_DEFINE(config_1,
@@ -176,7 +176,7 @@ static void process_data(const char *data)
 
 	/* Split the data by space and store in global_report array */
 	token = strtok(data_copy, " ");
-	while (token != NULL && i < 3)
+	while (token != NULL && i < 8)
 	{
 		/* Convert token to uint8_t and store in global_report */
 		*ptr = (uint8_t)strtoul(token, NULL, 10);
@@ -187,7 +187,7 @@ static void process_data(const char *data)
 		i++;
 	}
 
-	while (i < 3)
+	while (i < 8)
 	{
 		report[i][0] = '\0';
 		i++;
@@ -237,6 +237,7 @@ void set_rgb_led_state(uint8_t r, uint8_t g, uint8_t b)
 	}
 	// Set LED pins to desired state
 }
+
 /**
  * @brief Callback for connection establishment
  *
@@ -462,14 +463,15 @@ int main(void)
 		}
 
 		/* Print the report array contents */
-		printk("Report: %d, %d, %d\n", global_report[0], global_report[1], global_report[2]);
+		printk("Report: %d, %d, %d, %d, %d, %d, %d, %d\n",
+			   global_report[0], global_report[1], global_report[2], global_report[3],
+			   global_report[4], global_report[5], global_report[6], global_report[7]);
 
 		// Reset global_report
 
 		hog_button_loop(global_report);
-		global_report[1] = 0;
-		global_report[2] = 0;
-		k_sleep(K_MSEC(1));
+		memset(global_report + 2, 0, 6); // Reset keypresses
+		k_sleep(K_MSEC(100));
 	}
 
 	return 0;

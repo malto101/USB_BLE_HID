@@ -15,7 +15,7 @@ extern "C"
 
     void hog_init(void);
 
-    void hog_button_loop(int8_t global_report[3]);
+    void hog_button_loop(int8_t global_report[8]);
 
 #ifdef __cplusplus
 }
